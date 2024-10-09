@@ -1,1 +1,29 @@
 Attempting dial: 5001
+Attempting dial: 5002
+Connected to all clients
+(5000, 1) Send | Sending message to peers
+(5000, 2) Recv | Received message from 5001
+(5000, 3) Send | Sending message to peers
+(5000, 4) Recv | Received message from 5001
+(5000, 5) Recv | Received message from 5002
+(5000, 6) Send | Sending message to peers
+(5000, 7) Recv | Received message from 5001
+(5000, 8) Recv | Received message from 5002
+(5000, 9) Send | Sending message to peers
+(5000, 10) Recv | Received message from 5001
+(5000, 11) Recv | Received message from 5002
+(5000, 12) Send | Sending message to peers
+(5000, 13) Recv | Received message from 5001
+(5000, 14) Recv | Received message from 5002
+(5000, 15) Send | Sending message to peers
+(5000, 16) Recv | Received message from 5001
+(5000, 17) Recv | Received message from 5002
+(5000, 18) Send | Sending message to peers
+(5000, 19) Recv | Received message from 5001
+(5000, 20) Recv | Received message from 5002
+(5000, 21) Send | Sending message to peers
+(5000, 22) Recv | Received message from 5001
+(5000, 23) Recv | Received message from 5002
+(5000, 24) Send | Sending message to peers
+(5000, 25) Recv | Received message from 5001
+(5000, 26) Recv | Received message from 5002

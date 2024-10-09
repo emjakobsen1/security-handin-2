@@ -1,60 +1,29 @@
 Attempting dial: 5000
+(5002, 1) Recv | Received message from 5000
+(5002, 2) Recv | Received message from 5001
 Attempting dial: 5001
 Connected to all clients
-(5002, 1) Send | Seeking critical section access
-(5002, 1) Recv | Got reply from id 5000
-(5002, 1) Recv | Got reply from id 5001
-(5002, 2) Internal | Entered critical section
-(5002, 2) Recv | queueing request from 5000
-(5002, 3) Recv | queueing request from 5001
-(5002, 4) Internal | Leaving critical section
-(5002, 4) Send | Allowing 5000 to enter critical section (queue release) 
-(5002, 4) Send | Allowing 5001 to enter critical section (queue release) 
-(5002, 6) Send | Seeking critical section access
-(5002, 6) Recv | Got reply from id 5000
-(5002, 9) Recv | queueing request from 5000
-(5002, 9) Recv | Got reply from id 5001
-(5002, 10) Internal | Entered critical section
-(5002, 12) Recv | queueing request from 5001
-(5002, 13) Internal | Leaving critical section
-(5002, 13) Send | Allowing 5000 to enter critical section (queue release) 
-(5002, 13) Send | Allowing 5001 to enter critical section (queue release) 
-(5002, 15) Send | Seeking critical section access
-(5002, 15) Recv | Got reply from id 5000
-(5002, 18) Recv | queueing request from 5000
-(5002, 18) Recv | Got reply from id 5001
-(5002, 19) Internal | Entered critical section
-(5002, 21) Recv | queueing request from 5001
-(5002, 22) Internal | Leaving critical section
-(5002, 22) Send | Allowing 5000 to enter critical section (queue release) 
-(5002, 22) Send | Allowing 5001 to enter critical section (queue release) 
-(5002, 24) Send | Seeking critical section access
-(5002, 24) Recv | Got reply from id 5000
-(5002, 24) Recv | Got reply from id 5001
-(5002, 25) Internal | Entered critical section
-(5002, 27) Recv | queueing request from 5000
-(5002, 28) Recv | queueing request from 5001
-(5002, 29) Internal | Leaving critical section
-(5002, 29) Send | Allowing 5000 to enter critical section (queue release) 
-(5002, 29) Send | Allowing 5001 to enter critical section (queue release) 
-(5002, 31) Send | Seeking critical section access
-(5002, 31) Recv | Got reply from id 5000
-(5002, 34) Recv | queueing request from 5000
-(5002, 34) Recv | Got reply from id 5001
-(5002, 35) Internal | Entered critical section
-(5002, 37) Recv | queueing request from 5001
-(5002, 38) Internal | Leaving critical section
-(5002, 38) Send | Allowing 5000 to enter critical section (queue release) 
-(5002, 38) Send | Allowing 5001 to enter critical section (queue release) 
-(5002, 40) Send | Seeking critical section access
-(5002, 40) Recv | Got reply from id 5000
-(5002, 43) Recv | queueing request from 5000
-(5002, 43) Recv | Got reply from id 5001
-(5002, 44) Internal | Entered critical section
-(5002, 46) Recv | queueing request from 5001
-(5002, 47) Internal | Leaving critical section
-(5002, 47) Send | Allowing 5000 to enter critical section (queue release) 
-(5002, 47) Send | Allowing 5001 to enter critical section (queue release) 
-(5002, 49) Send | Seeking critical section access
-(5002, 49) Recv | Got reply from id 5000
-(5002, 52) Recv | queueing request from 5000
+(5002, 3) Recv | Received message from 5000
+(5002, 4) Recv | Received message from 5001
+(5002, 5) Send | Sending message to peers
+(5002, 6) Recv | Received message from 5000
+(5002, 7) Recv | Received message from 5001
+(5002, 8) Send | Sending message to peers
+(5002, 9) Recv | Received message from 5000
+(5002, 10) Recv | Received message from 5001
+(5002, 11) Send | Sending message to peers
+(5002, 12) Recv | Received message from 5000
+(5002, 13) Recv | Received message from 5001
+(5002, 14) Send | Sending message to peers
+(5002, 15) Recv | Received message from 5000
+(5002, 16) Recv | Received message from 5001
+(5002, 17) Send | Sending message to peers
+(5002, 18) Recv | Received message from 5000
+(5002, 19) Recv | Received message from 5001
+(5002, 20) Send | Sending message to peers
+(5002, 21) Recv | Received message from 5000
+(5002, 22) Recv | Received message from 5001
+(5002, 23) Send | Sending message to peers
+(5002, 24) Recv | Received message from 5000
+(5002, 25) Recv | Received message from 5001
+(5002, 26) Send | Sending message to peers
