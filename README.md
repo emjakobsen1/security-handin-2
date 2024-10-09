@@ -1,6 +1,6 @@
 # DSYS4
-Mandatory hand-in 4 for DSYS 2023
-
+Security hand-in 2
+(old readme from previous below)
 ##  How to run
 
  1. Run `main.go` in 3 separate terminals
