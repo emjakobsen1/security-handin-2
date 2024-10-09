@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"time"
 
-	message "github.com/emjakobsen1/dsysmutex/proto"
+	message "github.com/emjakobsen1/security-handin-2/proto"
 	"google.golang.org/grpc"
 )
 

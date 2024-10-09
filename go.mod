@@ -1,4 +1,4 @@
-module github.com/emjakobsen1/dsysmutex
+module github.com/emjakobsen1/security-handin-2
 
 go 1.19
 

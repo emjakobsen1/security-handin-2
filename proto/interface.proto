@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package = "https://github.com/emjakobsen1/security-handin-2/tree/master/proto";
+option go_package = "https://github.com/emjakobsen1/security-handin-2/proto";
 
 package proto;
 
