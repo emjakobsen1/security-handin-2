@@ -20,10 +20,10 @@ import (
 )
 
 var nameToPort = map[string]int32{
-	"Alice":    5000,
-	"Bob":      5001,
-	"Charlie":  5002,
-	"Hospital": 5003,
+	"Hospital": 5000,
+	"Alice":    5001,
+	"Bob":      5002,
+	"Charlie":  5003,
 }
 
 var portToName = func() map[int32]string {
@@ -33,16 +33,6 @@ var portToName = func() map[int32]string {
 	}
 	return m
 }()
-
-var certs = map[string]struct {
-	certFile string
-	keyFile  string
-}{
-	"Alice":    {"Alice.crt", "Alice.key"},
-	"Bob":      {"Bob.crt", "Bob.key"},
-	"Charlie":  {"Charlie.crt", "Charlie.key"},
-	"Hospital": {"Hospital.crt", "Hospital.key"},
-}
 
 type peer struct {
 	message.UnimplementedServiceServer
@@ -76,7 +66,23 @@ func main() {
 		log.Fatalf("failed to listen: %v", err)
 	}
 
-	serverCert, err := credentials.NewServerTLSFromFile("certificate/server.crt", "certificate/priv.key")
+	var serverCertFile, serverKeyFile string
+	switch p.id {
+	case 5000:
+		serverCertFile = "Hospital.crt"
+		serverKeyFile = "Hospital.key"
+	case 5001:
+		serverCertFile = "Alice.crt"
+		serverKeyFile = "Alice.key"
+	case 5002:
+		serverCertFile = "Bob.crt"
+		serverKeyFile = "Bob.key"
+	case 5003:
+		serverCertFile = "Charlie.crt"
+		serverKeyFile = "Charlie.key"
+	}
+
+	serverCert, err := credentials.NewServerTLSFromFile(serverCertFile, serverKeyFile)
 	if err != nil {
 		log.Fatalln("failed to create cert", err)
 	}
@@ -100,7 +106,19 @@ func main() {
 		}
 
 		//Set up client connections
-		clientCert, err := credentials.NewClientTLSFromFile("certificate/server.crt", "")
+		var clientCertFile string
+		switch port {
+		case 5000:
+			clientCertFile = "Hospital.crt"
+		case 5001:
+			clientCertFile = "Alice.crt"
+		case 5002:
+			clientCertFile = "Bob.crt"
+		case 5003:
+			clientCertFile = "Charlie.crt"
+		}
+
+		clientCert, err := credentials.NewClientTLSFromFile(clientCertFile, "")
 		if err != nil {
 			log.Fatalln("failed to create cert", err)
 		}
@@ -115,6 +133,7 @@ func main() {
 		p.clients[port] = c
 		fmt.Printf("%v", p.clients)
 	}
+
 	scanner := bufio.NewScanner(os.Stdin)
 	if ownPort != hospitalId {
 		fmt.Print("Enter a number between 0 and 1 000 000 to share it secretly with the other peers.\nNumber: ")
@@ -132,7 +151,7 @@ func main() {
 	}
 }
 func (p *peer) ShareDataChunks(secret int) {
-
+	p.sendMessageToPeers(secret)
 }
 
 func loadTLSCredentials(certFile, keyFile, caFile string) (credentials.TransportCredentials, error) {
@@ -163,9 +182,9 @@ func loadTLSCredentials(certFile, keyFile, caFile string) (credentials.Transport
 	return credentials.NewTLS(config), nil
 }
 
-func (p *peer) sendMessageToPeers() {
+func (p *peer) sendMessageToPeers(secret int) {
 	log.Printf("[%s] Send | Sending message to peers", p.name)
-	info := &message.Info{Id: p.id}
+	info := &message.Info{Id: p.id, SecretMessage: int32(secret)}
 	for id, client := range p.clients {
 		peerName := portToName[id] // Get the peer name from the ID
 		_, err := client.Request(p.ctx, info)
@@ -178,7 +197,7 @@ func (p *peer) sendMessageToPeers() {
 // Simple gRPC service method to handle incoming requests
 func (p *peer) Request(ctx context.Context, req *message.Info) (*message.Empty, error) {
 	peerName := portToName[req.Id] // Get the peer name from the request ID
-	log.Printf("[%s] Recv | Received message from %s", p.name, peerName)
+	log.Printf("[%s] Recv | Received message from %s with number %v", p.name, peerName, req.SecretMessage)
 	return &message.Empty{}, nil
 }
 
