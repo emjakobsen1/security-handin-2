@@ -1,0 +1,9 @@
+Alice | Secret: 20 
+Alice | Secret into shares: 2434 6510 1077 
+Alice | Sending message to peers: 2434
+Alice | Received message from Bob with 1617
+Alice | current chunks: [1077 1617]
+Alice | Received message from Charlie with 1877
+Alice | current chunks: [1077 1617 1877]
+Alice | Sending message to the Hospital: 4571
+Alice | Successfully sent message to the Hospital

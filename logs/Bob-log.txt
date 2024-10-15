@@ -1,0 +1,9 @@
+Bob | Received message from Alice with 2434
+Bob | current chunks: [2434]
+Bob | Secret: 20 
+Bob | Secret into shares: 1617 3384 5020 
+Bob | Sending message to peers: 1617
+Bob | Received message from Charlie with 1877
+Bob | current chunks: [2434 5020 1877]
+Bob | Sending message to the Hospital: 9331
+Bob | Successfully sent message to the Hospital

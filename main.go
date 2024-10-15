@@ -1,17 +1,16 @@
 package main
 
 import (
-	"bufio"
+	//"bufio"
 	"context"
-	"crypto/tls"
-	"crypto/x509"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
+	"math/rand"
 	"net"
 	"os"
 	"strconv"
+	"time"
 
 	"google.golang.org/grpc/credentials"
 
@@ -34,15 +33,23 @@ var portToName = func() map[int32]string {
 	return m
 }()
 
-type peer struct {
-	message.UnimplementedServiceServer
-	id             int32
-	name           string
-	clients        map[int32]message.ServiceClient
-	ctx            context.Context
-	receivedChunks []int
+var secretsMap = map[string]int32{
+	"Hospital": 5000,
+	"Alice":    5001,
+	"Bob":      5002,
+	"Charlie":  5003,
 }
 
+type peer struct {
+	message.UnimplementedServiceServer
+	id                   int32
+	name                 string
+	clients              map[int32]message.ServiceClient
+	ctx                  context.Context
+	receivedChunksOfData []int32
+}
+
+var R int = 10001
 var hospitalId int32 = 5000
 
 func main() {
@@ -50,14 +57,20 @@ func main() {
 	arg1, _ := strconv.ParseInt(os.Args[1], 10, 32)
 	ownPort := int32(arg1) + hospitalId //clients are 5001 5002 5003
 
+	secret, err := strconv.Atoi(os.Args[2])
+	if err != nil {
+		log.Fatalf("Invalid second argument: %v", err)
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	p := &peer{
-		id:             ownPort,
-		clients:        make(map[int32]message.ServiceClient),
-		receivedChunks: []int{},
-		ctx:            ctx,
+		id:                   ownPort,
+		clients:              make(map[int32]message.ServiceClient),
+		receivedChunksOfData: make([]int32, 0, 3),
+		ctx:                  ctx,
+		name:                 portToName[ownPort],
 	}
 
 	//set up server
@@ -65,19 +78,21 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
+	f := setLog(ownPort)
+	defer f.Close()
 
 	var serverCertFile, serverKeyFile string
-	switch p.id {
-	case 5000:
+	switch p.name {
+	case "Hospital":
 		serverCertFile = "Hospital.crt"
 		serverKeyFile = "Hospital.key"
-	case 5001:
+	case "Alice":
 		serverCertFile = "Alice.crt"
 		serverKeyFile = "Alice.key"
-	case 5002:
+	case "Bob":
 		serverCertFile = "Bob.crt"
 		serverKeyFile = "Bob.key"
-	case 5003:
+	case "Charlie":
 		serverCertFile = "Charlie.crt"
 		serverKeyFile = "Charlie.key"
 	}
@@ -105,22 +120,22 @@ func main() {
 			continue
 		}
 
-		//Set up client connections
 		var clientCertFile string
-		switch port {
-		case 5000:
+		clientName := portToName[port]
+		switch clientName {
+		case "Hospital":
 			clientCertFile = "Hospital.crt"
-		case 5001:
+		case "Alice":
 			clientCertFile = "Alice.crt"
-		case 5002:
+		case "Bob":
 			clientCertFile = "Bob.crt"
-		case 5003:
+		case "Charlie":
 			clientCertFile = "Charlie.crt"
 		}
 
 		clientCert, err := credentials.NewClientTLSFromFile(clientCertFile, "")
 		if err != nil {
-			log.Fatalln("failed to create cert", err)
+			log.Fatalln("failed to create certificate", err)
 		}
 
 		fmt.Printf("Trying to dial: %v\n", port)
@@ -131,78 +146,113 @@ func main() {
 		defer conn.Close()
 		c := message.NewServiceClient(conn)
 		p.clients[port] = c
-		fmt.Printf("%v", p.clients)
-	}
 
-	scanner := bufio.NewScanner(os.Stdin)
-	if ownPort != hospitalId {
-		fmt.Print("Enter a number between 0 and 1 000 000 to share it secretly with the other peers.\nNumber: ")
-		for scanner.Scan() {
-			secret, _ := strconv.ParseInt(scanner.Text(), 10, 32)
-			p.ShareDataChunks(int(secret))
+	}
+	log.Printf("%v | Secret: %v \n", portToName[ownPort], secret)
+	share1, share2, share3 := splitValue(secret, R)
+	p.receivedChunksOfData = append(p.receivedChunksOfData, int32(share3))
+	log.Printf("%v | Secret into shares: %v %v %v \n", portToName[ownPort], share1, share2, share3)
+
+	// scanner := bufio.NewScanner(os.Stdin)
+	// if ownPort != hospitalId {
+	// 	fmt.Print("Enter a number between 0 and 1 000 000 to share it secretly with the other peers.\n Number: ")
+	// 	for scanner.Scan() {
+	// 		//num, _ := strconv.ParseInt(scanner.Text(), 10, 32)
+	// 		p.ShareData(int(secret))
+	// 	}
+	// } else {
+	// 	fmt.Print("Hospital | Waiting on peers \n")
+	// 	for scanner.Scan() {
+	// 		if scanner.Text() == "quit" {
+	// 			return
+	// 		}
+	// 	}
+	// }
+	for {
+		if ownPort != hospitalId {
+			p.ShareData(int(share1))
+			time.Sleep(10 * time.Second)
+
 		}
-	} else {
-		fmt.Print("Waiting for data from peers...\nwrite 'quit' to end me\n")
-		for scanner.Scan() {
-			if scanner.Text() == "quit" {
+		if len(p.receivedChunksOfData) == 3 {
+			p.SendToHospital(int(p.sumChunks()))
+			if p.name != "Hospital" {
 				return
 			}
 		}
 	}
 }
-func (p *peer) ShareDataChunks(secret int) {
-	p.sendMessageToPeers(secret)
+func (p *peer) sumChunks() int32 {
+	var sum int32 = 0
+	for _, chunk := range p.receivedChunksOfData {
+		sum += chunk
+	}
+	return sum
 }
 
-func loadTLSCredentials(certFile, keyFile, caFile string) (credentials.TransportCredentials, error) {
-	// Load server's certificate and private key
-	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
-	if err != nil {
-		return nil, fmt.Errorf("could not load server key pair: %s", err)
+func splitValue(secret, R int) (int, int, int) {
+	rand.Seed(time.Now().UnixNano())
+
+	share1 := rand.Intn(R)
+	share2 := rand.Intn(R)
+	share3 := (secret - share1 - share2) % R
+
+	if share3 < 0 {
+		share3 += R
 	}
 
-	// Load CA's certificate
-	caCert, err := ioutil.ReadFile(caFile)
-	if err != nil {
-		return nil, fmt.Errorf("could not read CA certificate: %s", err)
-	}
-
-	// Create a certificate pool from CA's certificate
-	caCertPool := x509.NewCertPool()
-	caCertPool.AppendCertsFromPEM(caCert)
-
-	// Create the TLS configuration
-	config := &tls.Config{
-		Certificates: []tls.Certificate{cert},        // Server's certificate
-		ClientCAs:    caCertPool,                     // Trust CA's certificate
-		ClientAuth:   tls.RequireAndVerifyClientCert, // Enforce mutual TLS
-	}
-
-	// Create TransportCredentials
-	return credentials.NewTLS(config), nil
+	return share1, share2, share3
 }
-
-func (p *peer) sendMessageToPeers(secret int) {
-	log.Printf("[%s] Send | Sending message to peers", p.name)
-	info := &message.Info{Id: p.id, SecretMessage: int32(secret)}
+func (p *peer) ShareData(chunk int) {
+	log.Printf("%s | Sending message to peers: %v", p.name, chunk)
+	info := &message.Info{Id: p.id, SecretMessage: int32(chunk)}
 	for id, client := range p.clients {
-		peerName := portToName[id] // Get the peer name from the ID
+		peerName := portToName[id]
+		if peerName == "Hospital" {
+			continue
+		}
 		_, err := client.Request(p.ctx, info)
 		if err != nil {
-			log.Printf("[%s] Failed to send message to peer %s: %v", p.name, peerName, err)
+			log.Printf("%s | Failed to send message to peer %s: %v", p.name, peerName, err)
 		}
 	}
 }
 
-// Simple gRPC service method to handle incoming requests
+// Skal kun sende recievedChunksOFData når den er 3
+func (p *peer) SendToHospital(chunk int) {
+	log.Printf("%s | Sending message to the Hospital: %v", p.name, chunk)
+	info := &message.Info{Id: p.id, SecretMessage: int32(chunk)}
+
+	hospitalPort := int32(5000)
+	hospitalClient, exists := p.clients[hospitalPort]
+	if !exists {
+		log.Printf("%s | Hospital client not found", p.name)
+		return
+	}
+
+	_, err := hospitalClient.Request(p.ctx, info)
+	if err != nil {
+		log.Printf("%s | Failed to send message to the Hospital: %v", p.name, err)
+	} else {
+		log.Printf("%s | Successfully sent message to the Hospital", p.name)
+	}
+}
+
 func (p *peer) Request(ctx context.Context, req *message.Info) (*message.Empty, error) {
-	peerName := portToName[req.Id] // Get the peer name from the request ID
-	log.Printf("[%s] Recv | Received message from %s with number %v", p.name, peerName, req.SecretMessage)
+	peerName := portToName[req.Id]
+	p.receivedChunksOfData = append(p.receivedChunksOfData, req.SecretMessage)
+	log.Printf("%s | Received message from %s with %v", p.name, peerName, req.SecretMessage)
+	log.Printf("%s | current chunks: %v", p.name, p.receivedChunksOfData)
+	if p.name == "Hospital" {
+		total := p.sumChunks()
+		log.Printf("total sum %v", int(total)%R)
+	}
 	return &message.Empty{}, nil
 }
 
-func setLog(port int32) (*os.File, *os.File) {
-	filename := fmt.Sprintf("logs/peer(%v)-log.txt", port)
+func setLog(port int32) *os.File {
+	logID := portToName[port]
+	filename := fmt.Sprintf("logs/%v-log.txt", logID)
 	if err := os.Truncate(filename, 0); err != nil {
 		log.Printf("Failed to truncate: %v\n", err)
 	}
@@ -213,11 +263,5 @@ func setLog(port int32) (*os.File, *os.File) {
 	mw := io.MultiWriter(os.Stdout, f)
 	log.SetFlags(0)
 	log.SetOutput(mw)
-
-	cslog, err := os.OpenFile("logs/cs-log.txt", os.O_RDWR|os.O_CREATE|os.O_APPEND|os.O_TRUNC, 0666)
-	if err != nil {
-		log.Fatalf("Error opening critical section log file: %v", err)
-	}
-
-	return f, cslog
+	return f
 }
