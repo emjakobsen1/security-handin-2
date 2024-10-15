@@ -14,6 +14,7 @@ service Service {
 
 message Info {
     int32 id = 1;  // Keep only the id field
+    int32 secretMessage = 2;
 }
 
 message Empty {

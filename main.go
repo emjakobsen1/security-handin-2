@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"crypto/tls"
 	"crypto/x509"
@@ -10,7 +11,7 @@ import (
 	"log"
 	"net"
 	"os"
-	"time"
+	"strconv"
 
 	"google.golang.org/grpc/credentials"
 
@@ -33,80 +34,105 @@ var portToName = func() map[int32]string {
 	return m
 }()
 
-type peer struct {
-	message.UnimplementedServiceServer
-	id      int32
-	name    string
-	clients map[int32]message.ServiceClient
-	ctx     context.Context
+var certs = map[string]struct {
+	certFile string
+	keyFile  string
+}{
+	"Alice":    {"Alice.crt", "Alice.key"},
+	"Bob":      {"Bob.crt", "Bob.key"},
+	"Charlie":  {"Charlie.crt", "Charlie.key"},
+	"Hospital": {"Hospital.crt", "Hospital.key"},
 }
 
-func main() {
-	if len(os.Args) < 2 {
-		log.Fatalf("Usage: go run main.go [name]")
-	}
+type peer struct {
+	message.UnimplementedServiceServer
+	id             int32
+	name           string
+	clients        map[int32]message.ServiceClient
+	ctx            context.Context
+	receivedChunks []int
+}
 
-	// Get the name from the command-line arguments
-	name := os.Args[1]
-	ownPort, exists := nameToPort[name]
-	if !exists {
-		log.Fatalf("Invalid name. Use one of: Alice, Bob, Charlie, Hospital")
-	}
+var hospitalId int32 = 5000
+
+func main() {
+	log.SetFlags(log.Lshortfile)
+	arg1, _ := strconv.ParseInt(os.Args[1], 10, 32)
+	ownPort := int32(arg1) + hospitalId //clients are 5001 5002 5003
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	p := &peer{
-		id:      ownPort,
-		name:    name, // Set the peer's name here
-		clients: make(map[int32]message.ServiceClient),
-		ctx:     ctx,
+		id:             ownPort,
+		clients:        make(map[int32]message.ServiceClient),
+		receivedChunks: []int{},
+		ctx:            ctx,
 	}
 
-	// Create listener on ownPort
-	list, err := net.Listen("tcp", fmt.Sprintf(":%v", ownPort))
+	//set up server
+	list, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", ownPort))
 	if err != nil {
-		log.Fatalf("Could not listen on port: %v", err)
+		log.Fatalf("failed to listen: %v", err)
 	}
 
-	f, _ := setLog(ownPort)
-	defer f.Close()
+	serverCert, err := credentials.NewServerTLSFromFile("certificate/server.crt", "certificate/priv.key")
+	if err != nil {
+		log.Fatalln("failed to create cert", err)
+	}
 
-	grpcServer := grpc.NewServer()
+	grpcServer := grpc.NewServer(grpc.Creds(serverCert))
 	message.RegisterServiceServer(grpcServer, p)
 
-	// Start gRPC server in the background
+	// start the server
 	go func() {
 		if err := grpcServer.Serve(list); err != nil {
-			log.Fatalf("Failed to serve: %v", err)
+			log.Fatalf("failed to serve %v", err)
 		}
 	}()
 
-	// Connect to other peers
-	for peerName, port := range nameToPort {
+	//Dial the other peers
+	for i := 0; i <= 3; i++ {
+		port := hospitalId + int32(i)
+
 		if port == ownPort {
 			continue
 		}
 
-		log.Printf("[%s] Attempting dial: %s\n", p.name, peerName)
-
-		conn, err := grpc.Dial(fmt.Sprintf(":%v", port), grpc.WithInsecure(), grpc.WithBlock())
+		//Set up client connections
+		clientCert, err := credentials.NewClientTLSFromFile("certificate/server.crt", "")
 		if err != nil {
-			log.Fatalf("[%s] Dial failed to %s: %s", p.name, peerName, err)
+			log.Fatalln("failed to create cert", err)
+		}
+
+		fmt.Printf("Trying to dial: %v\n", port)
+		conn, err := grpc.Dial(fmt.Sprintf("localhost:%v", port), grpc.WithTransportCredentials(clientCert), grpc.WithBlock())
+		if err != nil {
+			log.Fatalf("did not connect: %s", err)
 		}
 		defer conn.Close()
 		c := message.NewServiceClient(conn)
 		p.clients[port] = c
+		fmt.Printf("%v", p.clients)
 	}
-
-	log.Printf("[%s] Connected to all clients\n", p.name)
-	time.Sleep(5 * time.Second)
-
-	// Example of sending a message to peers periodically
-	for {
-		p.sendMessageToPeers()
-		time.Sleep(5 * time.Second)
+	scanner := bufio.NewScanner(os.Stdin)
+	if ownPort != hospitalId {
+		fmt.Print("Enter a number between 0 and 1 000 000 to share it secretly with the other peers.\nNumber: ")
+		for scanner.Scan() {
+			secret, _ := strconv.ParseInt(scanner.Text(), 10, 32)
+			p.ShareDataChunks(int(secret))
+		}
+	} else {
+		fmt.Print("Waiting for data from peers...\nwrite 'quit' to end me\n")
+		for scanner.Scan() {
+			if scanner.Text() == "quit" {
+				return
+			}
+		}
 	}
+}
+func (p *peer) ShareDataChunks(secret int) {
+
 }
 
 func loadTLSCredentials(certFile, keyFile, caFile string) (credentials.TransportCredentials, error) {

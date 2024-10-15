@@ -1,18 +1,1 @@
 [Charlie] Attempting dial: Alice
-[Charlie] Attempting dial: Bob
-[Charlie] Attempting dial: Hospital
-[Charlie] Connected to all clients
-[Charlie] Send | Sending message to peers
-[Charlie] Recv | Received message from Hospital
-[Charlie] Recv | Received message from Bob
-[Charlie] Recv | Received message from Alice
-[Charlie] Send | Sending message to peers
-[Charlie] Recv | Received message from Hospital
-[Charlie] Recv | Received message from Bob
-[Charlie] Recv | Received message from Alice
-[Charlie] Send | Sending message to peers
-[Charlie] Recv | Received message from Hospital
-[Charlie] Recv | Received message from Bob
-[Charlie] Recv | Received message from Alice
-[Charlie] Send | Sending message to peers
-[Charlie] Failed to send message to peer Hospital: rpc error: code = Unavailable desc = connection error: desc = "transport: Error while dialing dial tcp :5003: connectex: No connection could be made because the target machine actively refused it."
