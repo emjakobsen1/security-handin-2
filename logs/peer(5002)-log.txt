@@ -1,29 +1,18 @@
-Attempting dial: 5000
-(5002, 1) Recv | Received message from 5000
-(5002, 2) Recv | Received message from 5001
-Attempting dial: 5001
-Connected to all clients
-(5002, 3) Recv | Received message from 5000
-(5002, 4) Recv | Received message from 5001
-(5002, 5) Send | Sending message to peers
-(5002, 6) Recv | Received message from 5000
-(5002, 7) Recv | Received message from 5001
-(5002, 8) Send | Sending message to peers
-(5002, 9) Recv | Received message from 5000
-(5002, 10) Recv | Received message from 5001
-(5002, 11) Send | Sending message to peers
-(5002, 12) Recv | Received message from 5000
-(5002, 13) Recv | Received message from 5001
-(5002, 14) Send | Sending message to peers
-(5002, 15) Recv | Received message from 5000
-(5002, 16) Recv | Received message from 5001
-(5002, 17) Send | Sending message to peers
-(5002, 18) Recv | Received message from 5000
-(5002, 19) Recv | Received message from 5001
-(5002, 20) Send | Sending message to peers
-(5002, 21) Recv | Received message from 5000
-(5002, 22) Recv | Received message from 5001
-(5002, 23) Send | Sending message to peers
-(5002, 24) Recv | Received message from 5000
-(5002, 25) Recv | Received message from 5001
-(5002, 26) Send | Sending message to peers
+[Charlie] Attempting dial: Alice
+[Charlie] Attempting dial: Bob
+[Charlie] Attempting dial: Hospital
+[Charlie] Connected to all clients
+[Charlie] Send | Sending message to peers
+[Charlie] Recv | Received message from Hospital
+[Charlie] Recv | Received message from Bob
+[Charlie] Recv | Received message from Alice
+[Charlie] Send | Sending message to peers
+[Charlie] Recv | Received message from Hospital
+[Charlie] Recv | Received message from Bob
+[Charlie] Recv | Received message from Alice
+[Charlie] Send | Sending message to peers
+[Charlie] Recv | Received message from Hospital
+[Charlie] Recv | Received message from Bob
+[Charlie] Recv | Received message from Alice
+[Charlie] Send | Sending message to peers
+[Charlie] Failed to send message to peer Hospital: rpc error: code = Unavailable desc = connection error: desc = "transport: Error while dialing dial tcp :5003: connectex: No connection could be made because the target machine actively refused it."

@@ -1,0 +1,17 @@
+[Alice] Attempting dial: Bob
+[Alice] Attempting dial: Charlie
+[Alice] Attempting dial: Hospital
+[Alice] Connected to all clients
+[Alice] Recv | Received message from Charlie
+[Alice] Recv | Received message from Hospital
+[Alice] Recv | Received message from Bob
+[Alice] Send | Sending message to peers
+[Alice] Recv | Received message from Charlie
+[Alice] Recv | Received message from Hospital
+[Alice] Recv | Received message from Bob
+[Alice] Send | Sending message to peers
+[Alice] Recv | Received message from Charlie
+[Alice] Recv | Received message from Hospital
+[Alice] Recv | Received message from Bob
+[Alice] Send | Sending message to peers
+[Alice] Recv | Received message from Charlie

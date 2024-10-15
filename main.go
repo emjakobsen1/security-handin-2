@@ -2,34 +2,63 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net"
 	"os"
-	"strconv"
 	"time"
+
+	"google.golang.org/grpc/credentials"
 
 	message "github.com/emjakobsen1/security-handin-2/proto"
 	"google.golang.org/grpc"
 )
 
+var nameToPort = map[string]int32{
+	"Alice":    5000,
+	"Bob":      5001,
+	"Charlie":  5002,
+	"Hospital": 5003,
+}
+
+var portToName = func() map[int32]string {
+	m := make(map[int32]string)
+	for name, port := range nameToPort {
+		m[port] = name
+	}
+	return m
+}()
+
 type peer struct {
 	message.UnimplementedServiceServer
 	id      int32
+	name    string
 	clients map[int32]message.ServiceClient
 	ctx     context.Context
 }
 
 func main() {
-	arg1, _ := strconv.ParseInt(os.Args[1], 10, 32)
-	ownPort := int32(arg1) + 5000
+	if len(os.Args) < 2 {
+		log.Fatalf("Usage: go run main.go [name]")
+	}
+
+	// Get the name from the command-line arguments
+	name := os.Args[1]
+	ownPort, exists := nameToPort[name]
+	if !exists {
+		log.Fatalf("Invalid name. Use one of: Alice, Bob, Charlie, Hospital")
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	p := &peer{
 		id:      ownPort,
+		name:    name, // Set the peer's name here
 		clients: make(map[int32]message.ServiceClient),
 		ctx:     ctx,
 	}
@@ -54,26 +83,23 @@ func main() {
 	}()
 
 	// Connect to other peers
-	for i := 0; i < 3; i++ {
-		port := 5000 + int32(i)
-
+	for peerName, port := range nameToPort {
 		if port == ownPort {
 			continue
 		}
 
-		var conn *grpc.ClientConn
-		log.Printf("Attempting dial: %v\n", port)
+		log.Printf("[%s] Attempting dial: %s\n", p.name, peerName)
 
 		conn, err := grpc.Dial(fmt.Sprintf(":%v", port), grpc.WithInsecure(), grpc.WithBlock())
 		if err != nil {
-			log.Fatalf("Dial failed: %s", err)
+			log.Fatalf("[%s] Dial failed to %s: %s", p.name, peerName, err)
 		}
 		defer conn.Close()
 		c := message.NewServiceClient(conn)
 		p.clients[port] = c
 	}
 
-	log.Printf("Connected to all clients\n")
+	log.Printf("[%s] Connected to all clients\n", p.name)
 	time.Sleep(5 * time.Second)
 
 	// Example of sending a message to peers periodically
@@ -83,20 +109,50 @@ func main() {
 	}
 }
 
+func loadTLSCredentials(certFile, keyFile, caFile string) (credentials.TransportCredentials, error) {
+	// Load server's certificate and private key
+	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+	if err != nil {
+		return nil, fmt.Errorf("could not load server key pair: %s", err)
+	}
+
+	// Load CA's certificate
+	caCert, err := ioutil.ReadFile(caFile)
+	if err != nil {
+		return nil, fmt.Errorf("could not read CA certificate: %s", err)
+	}
+
+	// Create a certificate pool from CA's certificate
+	caCertPool := x509.NewCertPool()
+	caCertPool.AppendCertsFromPEM(caCert)
+
+	// Create the TLS configuration
+	config := &tls.Config{
+		Certificates: []tls.Certificate{cert},        // Server's certificate
+		ClientCAs:    caCertPool,                     // Trust CA's certificate
+		ClientAuth:   tls.RequireAndVerifyClientCert, // Enforce mutual TLS
+	}
+
+	// Create TransportCredentials
+	return credentials.NewTLS(config), nil
+}
+
 func (p *peer) sendMessageToPeers() {
-	log.Printf("(%v) Send | Sending message to peers", p.id)
+	log.Printf("[%s] Send | Sending message to peers", p.name)
 	info := &message.Info{Id: p.id}
 	for id, client := range p.clients {
+		peerName := portToName[id] // Get the peer name from the ID
 		_, err := client.Request(p.ctx, info)
 		if err != nil {
-			log.Printf("Failed to send message to peer %v: %v", id, err)
+			log.Printf("[%s] Failed to send message to peer %s: %v", p.name, peerName, err)
 		}
 	}
 }
 
 // Simple gRPC service method to handle incoming requests
 func (p *peer) Request(ctx context.Context, req *message.Info) (*message.Empty, error) {
-	log.Printf("(%v) Recv | Received message from %v", p.id, req.Id)
+	peerName := portToName[req.Id] // Get the peer name from the request ID
+	log.Printf("[%s] Recv | Received message from %s", p.name, peerName)
 	return &message.Empty{}, nil
 }
 

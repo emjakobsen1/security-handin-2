@@ -1,29 +1,17 @@
-Attempting dial: 5000
-Attempting dial: 5002
-Connected to all clients
-(5001, 1) Recv | Received message from 5000
-(5001, 2) Send | Sending message to peers
-(5001, 3) Recv | Received message from 5000
-(5001, 4) Send | Sending message to peers
-(5001, 5) Recv | Received message from 5002
-(5001, 6) Recv | Received message from 5000
-(5001, 7) Send | Sending message to peers
-(5001, 8) Recv | Received message from 5002
-(5001, 9) Recv | Received message from 5000
-(5001, 10) Send | Sending message to peers
-(5001, 11) Recv | Received message from 5002
-(5001, 12) Recv | Received message from 5000
-(5001, 13) Send | Sending message to peers
-(5001, 14) Recv | Received message from 5002
-(5001, 15) Recv | Received message from 5000
-(5001, 16) Send | Sending message to peers
-(5001, 17) Recv | Received message from 5002
-(5001, 18) Recv | Received message from 5000
-(5001, 19) Send | Sending message to peers
-(5001, 20) Recv | Received message from 5002
-(5001, 21) Recv | Received message from 5000
-(5001, 22) Send | Sending message to peers
-(5001, 23) Recv | Received message from 5002
-(5001, 24) Recv | Received message from 5000
-(5001, 25) Send | Sending message to peers
-(5001, 26) Recv | Received message from 5002
+[Bob] Attempting dial: Alice
+[Bob] Attempting dial: Charlie
+[Bob] Attempting dial: Hospital
+[Bob] Connected to all clients
+[Bob] Recv | Received message from Charlie
+[Bob] Recv | Received message from Hospital
+[Bob] Send | Sending message to peers
+[Bob] Recv | Received message from Alice
+[Bob] Recv | Received message from Charlie
+[Bob] Recv | Received message from Hospital
+[Bob] Send | Sending message to peers
+[Bob] Recv | Received message from Alice
+[Bob] Recv | Received message from Charlie
+[Bob] Recv | Received message from Hospital
+[Bob] Send | Sending message to peers
+[Bob] Recv | Received message from Alice
+[Bob] Recv | Received message from Charlie
