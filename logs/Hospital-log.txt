@@ -1,0 +1,7 @@
+Hospital | Received message from Alice with share 19
+Hospital | Current shares: [19]
+Hospital | Received message from Bob with share 30
+Hospital | Current shares: [19 30]
+Hospital | Received message from Charlie with share 36
+Hospital | Current shares: [19 30 36]
+Hospital | total sum 85

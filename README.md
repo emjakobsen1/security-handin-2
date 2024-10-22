@@ -1,17 +1,31 @@
 # Security hand-in 2
-Security hand-in 2
-(old readme from previous below)
+
+This demo consists of 3 patients and the hospital communicating in a peer-to-peer environment over a localhost network. 
+
+### Prerequisties 
+
+It is possible you will need 1 or all of the following installed to run the demo:
+
+- Go
+
+- gRPC for Go (please see https://github.com/NaddiNadja/grpc101?tab=readme-ov-file#prerequisites for a guide)
+
+- openSSL
+
+
+
 ##  How to run
 
- 1. Run `main.go` in 3 separate terminals
+ 1. Run `main.go` in 4 separate terminals
 
     ```
-    $ go run main.go 0
-    $ go run main.go 1
-    $ go run main.go 2
+    $ go run main.go 0 0 
+    $ go run main.go 1 <secret integer>
+    $ go run main.go 2 <secret integer>
+    $ go run main.go 2 <secret integer>
     ```
 
-It is hardcoded for 3 peers with port 5000, 5001 and 5002. 
+It is hardcoded for 4 peers with Hospital port: 5000, Alice: 5001, Bob: 5002, Charlie: 5003. 
 
 
-2. A peer will create a log.txt in the root directory under the name `logs/peer(*)-log.txt`, with `*` being the bound port. Peers log their actions and logical timestamps. The critical section is present seperate log in `logs/cs-log.txt`. The logs are automatically cleared each time the program starts. 
+2. A peer will create a .txt with the events in the logs directory under the name `*-log.txt`, with `*` being the name. 
