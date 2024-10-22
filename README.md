@@ -22,7 +22,7 @@ It is possible you will need 1 or all of the following installed to run the demo
     $ go run main.go 0 0 
     $ go run main.go 1 <secret integer>
     $ go run main.go 2 <secret integer>
-    $ go run main.go 2 <secret integer>
+    $ go run main.go 3 <secret integer>
     ```
 
 It is hardcoded for 4 peers with Hospital port: 5000, Alice: 5001, Bob: 5002, Charlie: 5003. 
