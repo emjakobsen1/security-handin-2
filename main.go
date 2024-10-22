@@ -1,7 +1,6 @@
 package main
 
 import (
-	//"bufio"
 	"context"
 	"fmt"
 	"io"
@@ -18,8 +17,24 @@ import (
 	"google.golang.org/grpc"
 )
 
+/* Each peer is both a server for incoming requests and a client for sending messages */
+type peer struct {
+	message.UnimplementedServiceServer
+	id      int32
+	name    string
+	clients map[int32]message.ServiceClient
+	ctx     context.Context
+	shares  []int32
+}
+
+/* Modulo cycle */
+var R int = 20
+
+/* Alice Bob and Charlie are 5001 5002 5003 */
+var hospitalId int32 = 5000
+
 var nameToPort = map[string]int32{
-	"Hospital": 5000,
+	"Hospital": hospitalId,
 	"Alice":    5001,
 	"Bob":      5002,
 	"Charlie":  5003,
@@ -33,29 +48,10 @@ var portToName = func() map[int32]string {
 	return m
 }()
 
-var secretsMap = map[string]int32{
-	"Hospital": 5000,
-	"Alice":    5001,
-	"Bob":      5002,
-	"Charlie":  5003,
-}
-
-type peer struct {
-	message.UnimplementedServiceServer
-	id                   int32
-	name                 string
-	clients              map[int32]message.ServiceClient
-	ctx                  context.Context
-	receivedChunksOfData []int32
-}
-
-var R int = 10001
-var hospitalId int32 = 5000
-
 func main() {
 	log.SetFlags(log.Lshortfile)
 	arg1, _ := strconv.ParseInt(os.Args[1], 10, 32)
-	ownPort := int32(arg1) + hospitalId //clients are 5001 5002 5003
+	ownPort := int32(arg1) + hospitalId
 
 	secret, err := strconv.Atoi(os.Args[2])
 	if err != nil {
@@ -66,14 +62,14 @@ func main() {
 	defer cancel()
 
 	p := &peer{
-		id:                   ownPort,
-		clients:              make(map[int32]message.ServiceClient),
-		receivedChunksOfData: make([]int32, 0, 3),
-		ctx:                  ctx,
-		name:                 portToName[ownPort],
+		id:      ownPort,
+		clients: make(map[int32]message.ServiceClient),
+		shares:  make([]int32, 0, 3),
+		ctx:     ctx,
+		name:    portToName[ownPort],
 	}
 
-	//set up server
+	/* Set up the peer's server */
 	list, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", ownPort))
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
@@ -81,21 +77,8 @@ func main() {
 	f := setLog(ownPort)
 	defer f.Close()
 
-	var serverCertFile, serverKeyFile string
-	switch p.name {
-	case "Hospital":
-		serverCertFile = "Hospital.crt"
-		serverKeyFile = "Hospital.key"
-	case "Alice":
-		serverCertFile = "Alice.crt"
-		serverKeyFile = "Alice.key"
-	case "Bob":
-		serverCertFile = "Bob.crt"
-		serverKeyFile = "Bob.key"
-	case "Charlie":
-		serverCertFile = "Charlie.crt"
-		serverKeyFile = "Charlie.key"
-	}
+	serverCertFile := fmt.Sprintf("%s.crt", p.name)
+	serverKeyFile := fmt.Sprintf("%s.key", p.name)
 
 	serverCert, err := credentials.NewServerTLSFromFile(serverCertFile, serverKeyFile)
 	if err != nil {
@@ -105,14 +88,14 @@ func main() {
 	grpcServer := grpc.NewServer(grpc.Creds(serverCert))
 	message.RegisterServiceServer(grpcServer, p)
 
-	// start the server
+	/* Starts the server */
 	go func() {
 		if err := grpcServer.Serve(list); err != nil {
 			log.Fatalf("failed to serve %v", err)
 		}
 	}()
 
-	//Dial the other peers
+	/* Dials the other peers */
 	for i := 0; i <= 3; i++ {
 		port := hospitalId + int32(i)
 
@@ -120,25 +103,15 @@ func main() {
 			continue
 		}
 
-		var clientCertFile string
 		clientName := portToName[port]
-		switch clientName {
-		case "Hospital":
-			clientCertFile = "Hospital.crt"
-		case "Alice":
-			clientCertFile = "Alice.crt"
-		case "Bob":
-			clientCertFile = "Bob.crt"
-		case "Charlie":
-			clientCertFile = "Charlie.crt"
-		}
+		clientCertFile := fmt.Sprintf("%s.crt", clientName)
 
 		clientCert, err := credentials.NewClientTLSFromFile(clientCertFile, "")
 		if err != nil {
 			log.Fatalln("failed to create certificate", err)
 		}
 
-		fmt.Printf("Trying to dial: %v\n", port)
+		fmt.Printf("%s | Trying to dial: %v\n", p.name, port)
 		conn, err := grpc.Dial(fmt.Sprintf("localhost:%v", port), grpc.WithTransportCredentials(clientCert), grpc.WithBlock())
 		if err != nil {
 			log.Fatalf("did not connect: %s", err)
@@ -148,104 +121,109 @@ func main() {
 		p.clients[port] = c
 
 	}
-	log.Printf("%v | Secret: %v \n", portToName[ownPort], secret)
-	share1, share2, share3 := splitValue(secret, R)
-	p.receivedChunksOfData = append(p.receivedChunksOfData, int32(share3))
-	log.Printf("%v | Secret into shares: %v %v %v \n", portToName[ownPort], share1, share2, share3)
 
-	// scanner := bufio.NewScanner(os.Stdin)
-	// if ownPort != hospitalId {
-	// 	fmt.Print("Enter a number between 0 and 1 000 000 to share it secretly with the other peers.\n Number: ")
-	// 	for scanner.Scan() {
-	// 		//num, _ := strconv.ParseInt(scanner.Text(), 10, 32)
-	// 		p.ShareData(int(secret))
-	// 	}
-	// } else {
-	// 	fmt.Print("Hospital | Waiting on peers \n")
-	// 	for scanner.Scan() {
-	// 		if scanner.Text() == "quit" {
-	// 			return
-	// 		}
-	// 	}
-	// }
+	share1, share2, share3 := splitSecret(secret, R)
+
+	if ownPort != hospitalId {
+		p.shares = append(p.shares, int32(share3))
+		log.Printf("%v | Secret: %v \n", portToName[ownPort], secret)
+		log.Printf("%v | Secret into shares: %v %v %v \n", portToName[ownPort], share1, share2, share3)
+	}
+	/* Program loop */
 	for {
 		if ownPort != hospitalId {
-			p.ShareData(int(share1))
+			p.ShareData(share1, share2)
 			time.Sleep(10 * time.Second)
-
-		}
-		if len(p.receivedChunksOfData) == 3 {
-			p.SendToHospital(int(p.sumChunks()))
-			if p.name != "Hospital" {
-				return
+			if len(p.shares) == 3 {
+				p.SendToHospital(int(p.sumShares()))
+				if p.name != "Hospital" {
+					return
+				}
 			}
 		}
+
 	}
 }
-func (p *peer) sumChunks() int32 {
+
+/* The sum of the peer's shares */
+func (p *peer) sumShares() int32 {
 	var sum int32 = 0
-	for _, chunk := range p.receivedChunksOfData {
-		sum += chunk
+	for _, share := range p.shares {
+		sum += share
 	}
 	return sum
 }
 
-func splitValue(secret, R int) (int, int, int) {
+/* Splits the secret into 3 random shares */
+func splitSecret(secret, R int) (int, int, int) {
 	rand.Seed(time.Now().UnixNano())
 
-	share1 := rand.Intn(R)
-	share2 := rand.Intn(R)
-	share3 := (secret - share1 - share2) % R
-
-	if share3 < 0 {
-		share3 += R
-	}
+	share1 := rand.Intn(secret - 1)
+	share2 := rand.Intn(secret - share1)
+	share3 := secret - share1 - share2
 
 	return share1, share2, share3
 }
-func (p *peer) ShareData(chunk int) {
-	log.Printf("%s | Sending message to peers: %v", p.name, chunk)
-	info := &message.Info{Id: p.id, SecretMessage: int32(chunk)}
-	for id, client := range p.clients {
-		peerName := portToName[id]
-		if peerName == "Hospital" {
-			continue
-		}
-		_, err := client.Request(p.ctx, info)
-		if err != nil {
-			log.Printf("%s | Failed to send message to peer %s: %v", p.name, peerName, err)
-		}
-	}
+
+func (p *peer) SendToHospital(share int) {
+	hospitalPort := int32(hospitalId)
+	p.Send(hospitalPort, share)
 }
 
-// Skal kun sende recievedChunksOFData når den er 3
-func (p *peer) SendToHospital(chunk int) {
-	log.Printf("%s | Sending message to the Hospital: %v", p.name, chunk)
-	info := &message.Info{Id: p.id, SecretMessage: int32(chunk)}
+/* gRPC method. Send message */
+func (p *peer) Send(port int32, share int) {
+	peerName := portToName[port]
+	log.Printf("%s | Sending message to %s: %v", p.name, peerName, share)
 
-	hospitalPort := int32(5000)
-	hospitalClient, exists := p.clients[hospitalPort]
+	info := &message.Info{Id: p.id, SecretMessage: int32(share)}
+
+	client, exists := p.clients[port]
 	if !exists {
-		log.Printf("%s | Hospital client not found", p.name)
+		log.Printf("%s | Client %s not found", p.name, peerName)
 		return
 	}
 
-	_, err := hospitalClient.Request(p.ctx, info)
+	// Sends the request to the selected peer
+	_, err := client.Request(p.ctx, info)
 	if err != nil {
-		log.Printf("%s | Failed to send message to the Hospital: %v", p.name, err)
+		log.Printf("%s | Failed to send message to %s: %v", p.name, peerName, err)
 	} else {
-		log.Printf("%s | Successfully sent message to the Hospital", p.name)
+		log.Printf("%s | Successfully sent %v to %s", p.name, info.SecretMessage, peerName)
 	}
 }
 
+/* Sends share1, share2 to different peers */
+func (p *peer) ShareData(share1, share2 int) {
+	log.Printf("%s | Sharing data chunks: %v and %v", p.name, share1, share2)
+
+	var shareIndex int
+	for id := range p.clients {
+		if portToName[id] == "Hospital" {
+			continue
+		}
+		var chunk int
+		if shareIndex%3 == 0 {
+			chunk = share1
+		} else if shareIndex%3 == 1 {
+			chunk = share2
+		} else {
+			break
+		}
+		p.Send(id, chunk)
+		shareIndex++
+	}
+}
+
+/* gRPC method. Receive message */
 func (p *peer) Request(ctx context.Context, req *message.Info) (*message.Empty, error) {
 	peerName := portToName[req.Id]
-	p.receivedChunksOfData = append(p.receivedChunksOfData, req.SecretMessage)
-	log.Printf("%s | Received message from %s with %v", p.name, peerName, req.SecretMessage)
-	log.Printf("%s | current chunks: %v", p.name, p.receivedChunksOfData)
-	if p.name == "Hospital" {
-		total := p.sumChunks()
-		log.Printf("total sum %v", int(total)%R)
+	p.shares = append(p.shares, req.SecretMessage)
+	log.Printf("%s | Received message from %s with share %v", p.name, peerName, req.SecretMessage)
+	log.Printf("%s | Current shares: %v", p.name, p.shares)
+	if p.name == "Hospital" && len(p.shares) == 3 {
+		total := p.sumShares()
+		log.Printf("%s | total sum %v", p.name, total)
+
 	}
 	return &message.Empty{}, nil
 }

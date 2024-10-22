@@ -1,9 +1,13 @@
-Charlie | Received message from Alice with 2434
-Charlie | current chunks: [2434]
-Charlie | Received message from Bob with 1617
-Charlie | current chunks: [2434 1617]
+Charlie | Received message from Alice with share 27
+Charlie | Current shares: [27]
+Charlie | Received message from Bob with share 3
+Charlie | Current shares: [27 3]
 Charlie | Secret: 20 
-Charlie | Secret into shares: 1877 3595 4549 
-Charlie | Sending message to peers: 1877
-Charlie | Sending message to the Hospital: 8600
-Charlie | Successfully sent message to the Hospital
+Charlie | Secret into shares: 2 12 6 
+Charlie | Sharing data chunks: 2 and 12
+Charlie | Sending message to Alice: 2
+Charlie | Successfully sent 2 to Alice
+Charlie | Sending message to Bob: 12
+Charlie | Successfully sent 12 to Bob
+Charlie | Sending message to Hospital: 36
+Charlie | Successfully sent 36 to Hospital
